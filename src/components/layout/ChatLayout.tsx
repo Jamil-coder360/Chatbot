@@ -8,6 +8,7 @@ import Avatar from "@/components/common/Avatar";
 import Icon from "@/components/common/Icon";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 const media = [11, 22, 33, 44, 55, 66].map((n) => `https://picsum.photos/seed/chat${n}/200`);
 
@@ -17,6 +18,14 @@ export default function ChatLayout() {
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const { active } = chat;
 
+  const { signOut } = useAuth();
+const router = useRouter();
+
+const handleSignOut = () => {
+  signOut();
+  router.replace("/login");
+};
+
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-white">
       <nav className="hidden w-[72px] flex-col items-center gap-2 bg-brand py-5 text-white/70 lg:flex" aria-label="Main">
@@ -25,7 +34,13 @@ export default function ChatLayout() {
           <button key={n} className={`grid h-11 w-11 place-items-center rounded-xl transition-colors hover:bg-white/15 ${i === 0 ? "bg-white/20 text-white" : ""}`} aria-label={n}><Icon name={n} /></button>
         ))}
         <div className="mt-auto flex flex-col items-center gap-3">
-          <button className="grid h-11 w-11 place-items-center rounded-xl hover:bg-white/15" aria-label="Sign out"><Icon name="out" /></button>
+        <button
+  onClick={handleSignOut}
+  className="grid h-11 w-11 place-items-center rounded-xl hover:bg-white/15"
+  aria-label="Sign out"
+>
+  <Icon name="out" />
+</button>
           <Avatar name={user?.name ?? "Me"} src={user?.avatar} size={38} />
         </div>
       </nav>
