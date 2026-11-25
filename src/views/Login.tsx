@@ -4,12 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import AuthShell, { primary } from "@/components/common/AuthShell";
 import TextField from "@/components/common/TextField";
-import { api } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Login() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signin } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
   const [busy, setBusy] = useState(false);
@@ -22,7 +21,7 @@ export default function Login() {
     setErrors(next);
     if (Object.keys(next).length) return;
     setBusy(true);
-    try { const r = await api.login(form); signIn(r.user, r.token); router.push("/chat"); }
+    try { await signin(form); router.push("/chat"); }
     catch (err) { setErrors({ form: err instanceof Error ? err.message : "Could not sign in. Check your details and try again." }); }
     finally { setBusy(false); }
   };

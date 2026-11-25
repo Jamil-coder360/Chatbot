@@ -10,7 +10,7 @@ export default function MessageBubble({ message, mine }: { message: Message; min
       </p>
       <span className="mt-1 flex items-center gap-1 px-1 text-[11px] text-mute">
         {time}
-        {mine && <Icon name="check" size={14} className={message.status === "read" ? "text-brand" : ""} />}
+        {mine && <Icon name="check" size={14} className={message.isSeen ? "text-brand" : ""} />}
       </span>
     </div>
   );

@@ -4,12 +4,11 @@
 import { useEffect, useState } from "react";
 import Avatar from "@/components/common/Avatar";
 import Icon from "@/components/common/Icon";
-import type { Conversation } from "@/types/message";
-
-const tabs = ["All", "Unread", "Groups", "Archived"];
+import type { User } from "@/types/user";
+import { userApi } from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface Props {
-  conversations: Conversation[];
   activeId: string;
   onSelect: (id: string) => void;
   query: string;
@@ -17,31 +16,38 @@ interface Props {
 }
 
 export default function Sidebar({
-  conversations,
   activeId,
   onSelect,
   query,
   onQuery,
 }: Props) {
-  const [mounted, setMounted] = useState(false);
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setMounted(true);
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+
+        const data = await userApi.getAllUsers();
+
+        setUsers(data);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
   }, []);
 
-  const fmt = (iso: string) => {
-    if (!mounted) return "";
-
-    const date = new Date(iso);
-
-    if (Number.isNaN(date.getTime())) return "";
-
-    return date.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-  };
+  const filteredUsers = users.filter((user) =>
+    user.id !== currentUser?.id &&
+    (user.name.toLowerCase().includes(query.toLowerCase()) ||
+      user.email.toLowerCase().includes(query.toLowerCase()))
+  );
 
   return (
     <aside className="flex h-full w-full flex-col bg-white md:w-[340px] md:border-r md:border-line">
@@ -56,84 +62,56 @@ export default function Sidebar({
           <input
             value={query}
             onChange={(e) => onQuery(e.target.value)}
-            placeholder="Search chats"
+            placeholder="Search users"
             className="w-full bg-transparent text-sm outline-none placeholder:text-mute"
           />
         </label>
-
-        <div className="mt-4 flex gap-4 text-sm font-semibold">
-          {tabs.map((tab, i) => (
-            <button
-              key={tab}
-              className={`pb-1.5 ${
-                i === 0
-                  ? "border-b-2 border-brand text-brand"
-                  : "text-mute hover:text-ink"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
       </div>
 
       <ul className="scroll-thin flex-1 overflow-y-auto">
-        {conversations.map((c) => {
-          const active = c.id === activeId;
-
-          return (
-            <li key={c.id}>
-              <button
-                onClick={() => onSelect(c.id)}
-                className={`flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand ${
-                  active ? "bg-brand-soft" : "hover:bg-canvas"
-                }`}
-              >
-                <Avatar
-                  src={c.user.avatar}
-                  name={c.user.name}
-                  size={48}
-                  online={c.user.online}
-                />
-
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline justify-between gap-2">
-                    <span className="truncate font-bold">
-                      {c.user.name}
-                    </span>
-
-                    <span className="text-xs text-mute">
-                      {fmt(c.lastAt)}
-                    </span>
-                  </span>
-
-                  <span className="flex items-center justify-between gap-2">
-                    <span
-                      className={`truncate text-sm ${
-                        c.user.typing
-                          ? "font-semibold text-brand"
-                          : "text-mute"
-                      }`}
-                    >
-                      {c.user.typing ? "Typing…" : c.lastMessage}
-                    </span>
-
-                    {c.unread > 0 && (
-                      <span className="grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-white">
-                        {c.unread}
-                      </span>
-                    )}
-                  </span>
-                </span>
-              </button>
-            </li>
-          );
-        })}
-
-        {conversations.length === 0 && (
-          <li className="px-5 py-8 text-sm text-mute">
-            No chats match “{query}”. Try a different name.
+        {loading ? (
+          <li className="px-5 py-8 text-center text-sm text-mute">
+            Loading users...
           </li>
+        ) : (
+          <>
+            {filteredUsers.map((user) => {
+              const active = user.id === activeId;
+
+              return (
+                <li key={user.id}>
+                  <button
+                    onClick={() => onSelect(user.id)}
+                    className={`flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors ${
+                      active ? "bg-brand-soft" : "hover:bg-canvas"
+                    }`}
+                  >
+                    <Avatar
+                      src={user.profile ?? undefined}
+                      name={user.name}
+                      size={48}
+                    />
+
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-bold">
+                        {user.name}
+                      </span>
+
+                      <span className="block truncate text-sm text-mute">
+                        {user.email}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+
+            {filteredUsers.length === 0 && (
+              <li className="px-5 py-8 text-center text-sm text-mute">
+                No users found.
+              </li>
+            )}
+          </>
         )}
       </ul>
     </aside>

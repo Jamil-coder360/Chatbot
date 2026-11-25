@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import type { User } from "@/types/user";
-import { api } from "@/services/api";
+import { api, userApi } from "@/services/api";
 
 interface AuthContextType {
   user: User | null;
@@ -41,26 +41,32 @@ export const AuthProvider = ({
 
   // Restore logged-in user from localStorage
   useEffect(() => {
+    let restoredUser: User | null = null;
+
     try {
       const token = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
 
       if (token && storedUser) {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser) as User;
+        if (!parsedUser?.id) {
+          throw new Error("Stored user data is invalid.");
+        }
+        restoredUser = parsedUser;
       } else {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        setUser(null);
       }
     } catch (error) {
       console.error("Failed to restore authentication:", error);
-
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      setUser(null);
-    } finally {
-      setReady(true);
     }
+
+    // Restore browser-only state after the client hydrates.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setUser(restoredUser);
+    setReady(true);
   }, []);
 
   // Save user and JWT token
@@ -88,9 +94,23 @@ export const AuthProvider = ({
     async (data: { email: string; password: string }) => {
       const response = await api.login(data);
 
-      signIn(response.user, response.token);
+      if (!response.accessToken) {
+        throw new Error("Login response is missing an access token.");
+      }
 
-      return response;
+      const users = await userApi.getAllUsers();
+      const user = users.find(
+        (candidate) =>
+          candidate.email.toLowerCase() === data.email.trim().toLowerCase()
+      );
+
+      if (!user) {
+        throw new Error("Could not load the signed-in user profile.");
+      }
+
+      signIn(user, response.accessToken);
+
+      return { token: response.accessToken, user };
     },
     [signIn]
   );

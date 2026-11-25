@@ -32,13 +32,11 @@ async function request<T>(
     throw new Error(json.message || "Request failed");
   }
 
-  // Handle backend response wrapper
   return (json.data ?? json) as T;
 }
 
-type Session = {
-  token: string;
-  user: User;
+type LoginResponse = {
+  accessToken: string;
 };
 
 const post = (body: unknown): RequestInit => ({
@@ -46,12 +44,47 @@ const post = (body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 });
 
+
+export const conversationApi = {
+  getConversations: () =>
+    request<Conversation[]>("/chats", {
+      method: "GET",
+    }),
+
+  getOrCreateChat: (userId: string) =>
+    request<Conversation>(`/chats/${userId}`, {
+      method: "POST",
+    }),
+};
+
+export const messageApi = {
+  getMessages: (chatId: string) =>
+    request<Message[]>(`/chats/${chatId}/messages`, {
+      method: "GET",
+    }),
+
+  sendMessage: (chatId: string, text: string) =>
+    request<Message>(`/chats/${chatId}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
+};
+
+
+
+export const userApi = {
+  getAllUsers: async () => {
+    return request<User[]>("/user", {
+      method: "GET",
+    });
+  },
+};
 export const api = {
   login: (b: {
     email: string;
     password: string;
   }) =>
-    request<Session>("/auth/login", post(b)),
+    request<LoginResponse>("/auth/login", post(b)),
 
   register: (b: {
     name: string;
